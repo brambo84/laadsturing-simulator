@@ -109,6 +109,28 @@ button.mini{background:var(--d-tile);border:1px solid var(--d-line);border-radiu
 .pms:disabled{opacity:.35;cursor:default}
 .setv{flex:1;text-align:center;font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
 .setv i{font-style:normal;font-size:13px;color:var(--d-muted);margin-left:3px}
+.list{display:flex;flex-direction:column;gap:4px;flex:1;min-height:0;overflow:auto}
+.lrow{height:32px;flex:none;border-radius:8px;background:var(--d-tile);border:2px solid var(--d-line2);display:flex;align-items:center;gap:8px;padding:0 9px;font-size:12px;font-weight:700;color:var(--d-ink);text-align:left}
+:where(.scr) .lrow{border:2px solid var(--d-line2)}
+.lrow .sub{margin-left:auto;font-size:10px;font-weight:600;color:var(--d-muted);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.lrow.sel{border-color:var(--d-green)}
+.lrow.sel .sub{color:var(--d-green)}
+.lrow:disabled{opacity:.45;cursor:default}
+.lrow .ok{color:var(--d-green)}
+.lrow .todo{color:var(--d-amber)}
+.vtext{font-size:11px;font-weight:600;color:var(--d-muted);line-height:1.35}
+.field{height:32px;border-radius:8px;background:var(--d-tile);border:2px solid var(--d-blue);display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:14px;font-weight:700;letter-spacing:.04em}
+.field span{overflow:hidden;white-space:nowrap}
+.field .err{font-size:10px;letter-spacing:0;color:var(--d-red)}
+.kb{display:flex;flex-direction:column;gap:3px;margin-top:auto}
+.kr{display:flex;gap:3px}
+.k{height:31px;flex:1;border-radius:6px;background:#2A313C;color:var(--d-ink);font-size:13px;font-weight:700}
+.k.w{flex:1.5}.k.sp{flex:4}.k.go{flex:1.8;background:var(--d-green);color:var(--d-bg)}
+.k.on{background:var(--d-ink);color:var(--d-bg)}
+.msg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;font-size:15px;font-weight:800}
+.msg span{font-size:11px;color:var(--d-muted);font-weight:600;max-width:260px}
+.spin{width:30px;height:30px;border-radius:50%;border:3px solid var(--d-line2);border-top-color:var(--d-blue);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
 .limnote{font-size:10px;font-weight:600;color:var(--d-muted);text-align:center}
 
 /* ---------- control panel ---------- */
@@ -226,7 +248,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
 
             <!-- settings -->
             <div class="view" id="vSet" hidden>
-              <div class="vhead"><b>Instellingen</b></div>
+              <div class="vhead"><b>Toestel en vermogen</b></div>
               <div class="setrow"><span class="k">Aan de stekker</span>
                 <button type="button" class="devb" data-dev="wagen" id="setWagen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="icWagen"></path></svg>Wagen</button>
                 <button type="button" class="devb" data-dev="zwembad" id="setZwembad"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="icZwembad"></path></svg>Zwembad</button>
@@ -241,6 +263,54 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
                 <button type="button" class="okb" id="setCancel">Annuleer</button>
                 <button type="button" class="okb go" id="setOk">OK</button>
               </div>
+            </div>
+
+            <!-- settings menu -->
+            <div class="view" id="vSetMenu" hidden>
+              <div class="vhead"><b>Instellingen</b>
+                <button type="button" class="xbtn" id="smClose" aria-label="Sluiten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+              </div>
+              <div class="mgrid" id="smGrid"></div>
+            </div>
+
+            <!-- first setup at a new place -->
+            <div class="view" id="vSetup" hidden>
+              <div class="vhead"><b>Laadsturing instellen</b></div>
+              <div class="vtext" id="setupTxt"></div>
+              <div class="list" id="setupList"></div>
+            </div>
+
+            <!-- wifi list -->
+            <div class="view" id="vWifi" hidden>
+              <div class="vhead"><b>Wifi kiezen</b>
+                <span class="hbtns"><button type="button" class="xbtn" id="wifiScan" aria-label="Opnieuw zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"></path></svg></button>
+                <button type="button" class="xbtn" id="wifiBack" aria-label="Terug"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button></span>
+              </div>
+              <div class="list" id="wifiList"></div>
+            </div>
+
+            <!-- wifi password -->
+            <div class="view" id="vPass" hidden>
+              <div class="vhead"><b id="passTitle">Wachtwoord</b>
+                <button type="button" class="xbtn" id="passBack" aria-label="Terug"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button>
+              </div>
+              <div class="field"><span id="passField"></span><span class="err" id="passErr"></span></div>
+              <div class="kb" id="kb"></div>
+            </div>
+
+            <!-- HomeWizard devices -->
+            <div class="view" id="vDev" hidden>
+              <div class="vhead"><b>Apparaten</b>
+                <span class="hbtns"><button type="button" class="xbtn" id="devScan" aria-label="Opnieuw zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"></path></svg></button>
+                <button type="button" class="xbtn" id="devBack" aria-label="Terug"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button></span>
+              </div>
+              <div class="list" id="devList"></div>
+            </div>
+
+            <!-- busy / message -->
+            <div class="view" id="vMsg" hidden>
+              <div class="msg"><div class="spin" id="msgSpin"></div><b id="msgTitle"></b><span id="msgText"></span></div>
+              <button type="button" class="okb go" id="msgOk" hidden>OK</button>
             </div>
 
           </div></div></div>
@@ -293,6 +363,15 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
       <button type="button" class="btn wide" id="btnFull">Wagen is vol</button>
       <p class="hint" id="fullHint"></p>
       <p class="hint">Toestel en vermogen stel je in op het scherm zelf: tik op de modus en dan op het tandwiel.</p>
+    </div>
+
+    <div class="blk">
+      <div class="blk-h"><h2>Installatie</h2><span class="badge" id="locBadge">Bij jou thuis</span></div>
+      <div class="kv"><span>Wifi</span><b id="instWifi"></b></div>
+      <div class="kv"><span>P1-meter</span><b id="instP1"></b></div>
+      <div class="kv"><span>Stekker</span><b id="instPlug"></b></div>
+      <button type="button" class="btn wide" id="btnMove">Naar je schoonbroer brengen</button>
+      <p class="hint">Bootst na wat er gebeurt als je het toestel thuis instelt en daarna bij je schoonbroer inplugt: het vindt zijn wifi niet en vraagt om wifi en apparaten te kiezen. Instellingen zoals limiet en vermogen blijven bewaard.</p>
     </div>
 
     <div class="blk">
@@ -375,6 +454,27 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
 
   function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
 
+  // ----- installation: survives Reset, like the separate settings memory on the real device
+  var PLACES = {
+    thuis: {name:'Bij jou thuis',
+      nets:[{ssid:'Wifi-thuis',bars:4,lock:true},{ssid:'Proximus-Home-2F17',bars:2,lock:true},{ssid:'TelenetWiFree',bars:1,lock:false}],
+      devs:[{id:'p1-a1',type:'p1',name:'P1-meter',ip:'192.168.1.20',api:true},{id:'skt-a2',type:'skt',name:'Laadpunt',ip:'192.168.1.31',api:true}]},
+    schoonbroer: {name:'Bij je schoonbroer',
+      nets:[{ssid:'telenet-5A3F21',bars:4,lock:true},{ssid:'Proximus-Home-91B2',bars:3,lock:true},{ssid:'TelenetWiFree',bars:2,lock:false},{ssid:'WiFi-buren',bars:1,lock:true}],
+      devs:[{id:'p1-b1',type:'p1',name:'P1-meter',ip:'192.168.0.14',api:true},{id:'skt-b2',type:'skt',name:'Laadpunt garage',ip:'192.168.0.21',api:true},
+            {id:'skt-b3',type:'skt',name:'Zwembad',ip:'192.168.0.22',api:true},{id:'skt-b4',type:'skt',name:'Koelkast',ip:'192.168.0.23',api:false}]}
+  };
+  var INST = {place:'thuis', saved:{'Wifi-thuis':true}, ssid:'Wifi-thuis', p1:'p1-a1', plug:'skt-a2', found:false};
+  function place(){ return PLACES[INST.place]; }
+  function devById(id){ var d=null; place().devs.forEach(function(x){ if(x.id===id) d=x; }); return d; }
+  function configured(){ return !!(INST.ssid && devById(INST.p1) && devById(INST.plug)); }
+  function arrive(p){
+    INST.place = p; INST.ssid = null;
+    place().nets.forEach(function(n){ if(INST.saved[n.ssid] && !INST.ssid) INST.ssid = n.ssid; });
+    if(!devById(INST.p1)) INST.p1 = null;
+    if(!devById(INST.plug)) INST.plug = null;
+  }
+
   var S;
   function fresh(){
     var mstart = parseFloat($('mstart').value);
@@ -441,6 +541,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
   // what the device decides; returns nothing, sets S.wait for the display
   function control(){
     S.wait = 0; S.hold = 0;
+    if(!configured()){ setPlug(false); return; }
     var m = S.mode;
     if(m==='aan'){ setPlug(true); return; }
     if(m==='uit'){ setPlug(false); return; }
@@ -536,7 +637,12 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
     $('vMain').hidden = S.screen!=='main';
     $('vMenu').hidden = S.screen!=='menu';
     $('vLimit').hidden = S.screen!=='limit';
-    $('vSet').hidden = S.screen!=='set';
+    var scr = S.screen;
+    if(scr==='main' && !configured()) scr = 'setup';
+    $('vMain').hidden = scr!=='main';
+    $('vSet').hidden = scr!=='set';
+    ['vSetMenu','vSetup','vWifi','vPass','vDev','vMsg'].forEach(function(id){ $(id).hidden = scr !== {vSetMenu:'setmenu',vSetup:'setup',vWifi:'wifi',vPass:'pass',vDev:'dev',vMsg:'msg'}[id]; });
+    renderSetup(scr);
     $('devIcon').setAttribute('d', D().i);
     $('devName').textContent = D().n;
     if(S.setTmp){
@@ -603,8 +709,153 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
     $('pwOut').textContent = fmt(P(),1)+' kW';
     $('btnFull').classList.toggle('on', S.carFull);
     $('mOut').textContent = fmt(parseFloat($('mstart').value),1)+' kW';
-    $('why').textContent = whyText();
+    $('why').textContent = configured() ? whyText() : 'Het toestel is nog niet ingesteld op deze plek. Zolang wifi, P1-meter en stekker niet gekozen zijn, blijft de stekker uit.';
+    $('locBadge').textContent = place().name;
+    $('instWifi').textContent = INST.ssid || 'niet verbonden';
+    $('instP1').textContent = devById(INST.p1) ? devById(INST.p1).name+' ('+devById(INST.p1).ip+')' : 'niet gekozen';
+    $('instPlug').textContent = devById(INST.plug) ? devById(INST.plug).name+' ('+devById(INST.plug).ip+')' : 'niet gekozen';
+    $('btnMove').textContent = INST.place==='thuis' ? 'Naar je schoonbroer brengen' : 'Terug naar huis brengen';
   }
+
+  // ----- setup screens
+  var ICON = {
+    wifi:'M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01',
+    dev:'M4 4h16v12H4zM8 20h8M12 16v4',
+    plug:'M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4',
+    upd:'M12 3v12M7 10l5 5 5-5M4 21h16',
+    car:'M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M3 11h18v6H3zM6 17v2M18 17v2',
+    lock:'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3',
+    ok:'M5 12l5 5 9-10', chev:'M9 6l6 6-6 6'
+  };
+  function svg(d,sz){ return '<svg width="'+(sz||14)+'" height="'+(sz||14)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+d+'"></path></svg>'; }
+  function bars(n){ var h=''; for(var i=1;i<=4;i++) h+='<rect x="'+(i*5-3)+'" y="'+(18-i*4)+'" width="3" height="'+(i*4)+'" rx="1" fill="'+(i<=n?'currentColor':'#3A4250')+'"></rect>'; return '<svg width="20" height="16" viewBox="0 0 22 18" aria-hidden="true">'+h+'</svg>'; }
+  function esc(t){ return String(t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  var UI = {ret:'setmenu', scanning:false, pickNet:null, pass:'', shift:false, nums:false, err:'', msg:null, devPick:{p1:null, plug:null}};
+  var setupKey = '';
+
+  function busy(title, text, ms, then){
+    UI.msg = {title:title, text:text, spin:true}; S.screen='msg'; render();
+    setTimeout(function(){ then(); render(); }, ms);
+  }
+  function note(title, text, back){
+    UI.msg = {title:title, text:text, spin:false, back:back}; S.screen='msg';
+  }
+
+  function renderSetup(scr){
+    var key = scr+'|'+INST.place+'|'+INST.ssid+'|'+INST.p1+'|'+INST.plug+'|'+UI.pass+'|'+UI.shift+'|'+UI.nums+'|'+UI.err+'|'+UI.devPick.p1+'|'+UI.devPick.plug+'|'+S.dev+'|'+P()+'|'+(UI.msg?UI.msg.title:'');
+    if(key===setupKey) return; setupKey = key;
+    if(scr==='setmenu'){
+      var items=[['toestel','Toestel',D().n+' · '+fmt(P(),1)+' kW',ICON.car],['wifi','Wifi',INST.ssid||'niet verbonden',ICON.wifi],
+                 ['dev','Apparaten',(devById(INST.p1)&&devById(INST.plug))?'P1 + stekker':'kiezen',ICON.dev],['upd','Update','zoek nieuwe versie',ICON.upd]];
+      $('smGrid').innerHTML = items.map(function(it){ return '<button type="button" class="mbtn" data-go="'+it[0]+'" style="color:var(--d-ink)">'+svg(it[3],22)+'<span><span class="n">'+it[1]+'</span><span class="d">'+esc(it[2])+'</span></span></button>'; }).join('');
+    }
+    if(scr==='setup'){
+      $('setupTxt').textContent = !INST.ssid ? 'Geen bekende wifi gevonden. Stel het toestel in voor deze plek; je andere instellingen blijven bewaard.'
+                                             : 'Verbonden met '+INST.ssid+'. Kies nog de P1-meter en de stekker.';
+      var rows=[['wifi','1  Wifi', INST.ssid ? INST.ssid : 'kiezen', !!INST.ssid],
+                ['dev','2  Apparaten', (devById(INST.p1)&&devById(INST.plug)) ? 'gekozen' : 'kiezen', !!(devById(INST.p1)&&devById(INST.plug))],
+                ['toestel','3  Toestel', D().n+' · '+fmt(P(),1)+' kW', true]];
+      $('setupList').innerHTML = rows.map(function(r,i){
+        var dis = (r[0]==='dev' && !INST.ssid) ? ' disabled' : '';
+        return '<button type="button" class="lrow" data-go="'+r[0]+'"'+dis+'>'+esc(r[1])+'<span class="sub"><span class="'+(r[3]?'ok':'todo')+'">'+esc(r[2])+'</span>'+svg(r[3]?ICON.ok:ICON.chev,12)+'</span></button>';
+      }).join('');
+    }
+    if(scr==='wifi'){
+      $('wifiList').innerHTML = UI.scanning ? '<div class="msg"><div class="spin"></div><span>Netwerken zoeken...</span></div>'
+        : place().nets.map(function(n){
+          var cur = n.ssid===INST.ssid;
+          return '<button type="button" class="lrow'+(cur?' sel':'')+'" data-ssid="'+esc(n.ssid)+'">'+esc(n.ssid)+'<span class="sub">'+(cur?'verbonden ':'')+(n.lock?svg(ICON.lock,11):'')+bars(n.bars)+'</span></button>';
+        }).join('');
+    }
+    if(scr==='pass'){
+      $('passTitle').textContent = UI.pickNet;
+      $('passField').textContent = UI.pass ? UI.pass.replace(/./g,'•').slice(0,-1)+UI.pass.slice(-1) : 'wachtwoord';
+      $('passField').style.color = UI.pass ? '' : '#6B7482';
+      $('passErr').textContent = UI.err;
+      var rows = UI.nums ? ['1234567890','-_.@#!?&*/',',:;()+=%~'] : ['qwertyuiop','asdfghjkl','zxcvbnm'];
+      var h = rows.map(function(r,i){
+        var ks = r.split('').map(function(c){ var t = UI.shift && !UI.nums ? c.toUpperCase() : c; return '<button type="button" class="k" data-k="'+esc(t)+'">'+esc(t)+'</button>'; }).join('');
+        if(i===2) ks = '<button type="button" class="k w'+(UI.shift?' on':'')+'" data-k="SHIFT" aria-label="Hoofdletters">'+svg('M12 4l7 8h-4v7H9v-7H5z',14)+'</button>'+ks+'<button type="button" class="k w" data-k="BACK" aria-label="Wissen">'+svg('M9 5h11v14H9l-6-7zM12 9l5 6M17 9l-5 6',14)+'</button>';
+        return '<div class="kr">'+ks+'</div>';
+      }).join('');
+      h += '<div class="kr"><button type="button" class="k w" data-k="NUM">'+(UI.nums?'abc':'123')+'</button><button type="button" class="k sp" data-k=" ">spatie</button><button type="button" class="k go" data-k="OK">Verbind</button></div>';
+      $('kb').innerHTML = h;
+    }
+    if(scr==='dev'){
+      if(UI.scanning){ $('devList').innerHTML = '<div class="msg"><div class="spin"></div><span>HomeWizard-toestellen zoeken...</span></div>'; return; }
+      var list = place().devs.map(function(d){
+        var sel = (d.type==='p1' && UI.devPick.p1===d.id) || (d.type==='skt' && UI.devPick.plug===d.id);
+        var sub = !d.api ? 'lokale API uit' : (sel ? (d.type==='p1'?'gekozen als P1':'gekozen als stekker') : d.ip);
+        return '<button type="button" class="lrow'+(sel?' sel':'')+'" data-dev="'+d.id+'"'+(d.api?'':' disabled')+'>'+svg(d.type==='p1'?ICON.dev:ICON.plug,14)+esc(d.name)+'<span class="sub">'+esc(sub)+'</span></button>';
+      }).join('');
+      var ready = UI.devPick.p1 && UI.devPick.plug;
+      list += '<button type="button" class="okb go" data-done="1"'+(ready?'':' disabled style="opacity:.4"')+'>'+(ready?'Klaar':'Kies P1-meter en stekker')+'</button>';
+      $('devList').innerHTML = list;
+    }
+    if(scr==='msg' && UI.msg){
+      $('msgSpin').hidden = !UI.msg.spin; $('msgTitle').textContent = UI.msg.title; $('msgText').textContent = UI.msg.text;
+      $('msgOk').hidden = UI.msg.spin;
+    }
+  }
+
+  function backFromSub(){ S.screen = configured() ? UI.ret : 'main'; setupKey=''; render(); }
+  function openSub(go, ret){
+    UI.ret = ret;
+    if(go==='toestel'){ S.setTmp={dev:S.dev, pw:{wagen:S.pw.wagen, zwembad:S.pw.zwembad}}; S.screen='set'; }
+    if(go==='wifi'){ S.screen='wifi'; UI.scanning=true; setTimeout(function(){ UI.scanning=false; setupKey=''; render(); }, 1400); }
+    if(go==='dev'){ S.screen='dev'; UI.scanning=true; UI.devPick={p1:INST.p1, plug:INST.plug}; setTimeout(function(){ UI.scanning=false; setupKey=''; render(); }, 1600); }
+    if(go==='upd'){ busy('Zoeken naar update', 'Het toestel kijkt op GitHub of er een nieuwe versie is.', 1800, function(){ note('Je hebt de nieuwste versie', 'Versie 1.0 is geinstalleerd. Een nieuwe versie wordt hier gedownload en vanzelf geinstalleerd.', 'setmenu'); }); }
+    setupKey=''; render();
+  }
+  $('smGrid').addEventListener('click', function(e){ var b=e.target.closest('[data-go]'); if(b) openSub(b.dataset.go, 'setmenu'); });
+  $('smClose').addEventListener('click', function(){ S.screen='main'; render(); });
+  $('setupList').addEventListener('click', function(e){ var b=e.target.closest('[data-go]'); if(b && !b.disabled) openSub(b.dataset.go, 'main'); });
+  $('wifiBack').addEventListener('click', backFromSub);
+  $('wifiScan').addEventListener('click', function(){ openSub('wifi', UI.ret); });
+  $('wifiList').addEventListener('click', function(e){
+    var b=e.target.closest('[data-ssid]'); if(!b) return;
+    var n=null; place().nets.forEach(function(x){ if(x.ssid===b.dataset.ssid) n=x; });
+    UI.pickNet = n.ssid; UI.pass=''; UI.err=''; UI.shift=false; UI.nums=false;
+    if(!n.lock || INST.saved[n.ssid]){ connect(); return; }
+    S.screen='pass'; setupKey=''; render();
+  });
+  function connect(){
+    busy('Verbinden', 'met '+UI.pickNet, 1500, function(){
+      INST.ssid = UI.pickNet; INST.saved[UI.pickNet] = true; setupKey='';
+      if(UI.ret==='main' && !configured()){ S.screen='main'; }
+      else note('Verbonden', 'Het toestel is verbonden met '+UI.pickNet+' en onthoudt dit netwerk.', UI.ret);
+    });
+  }
+  $('passBack').addEventListener('click', function(){ S.screen='wifi'; setupKey=''; render(); });
+  $('kb').addEventListener('click', function(e){
+    var b=e.target.closest('[data-k]'); if(!b) return; var k=b.dataset.k; UI.err='';
+    if(k==='SHIFT') UI.shift=!UI.shift;
+    else if(k==='NUM') UI.nums=!UI.nums;
+    else if(k==='BACK') UI.pass=UI.pass.slice(0,-1);
+    else if(k==='OK'){ if(UI.pass.length<8){ UI.err='minstens 8 tekens'; } else { connect(); return; } }
+    else { if(UI.pass.length<63) UI.pass+=k; UI.shift=false; }
+    setupKey=''; render();
+  });
+  $('devBack').addEventListener('click', backFromSub);
+  $('devScan').addEventListener('click', function(){ openSub('dev', UI.ret); });
+  $('devList').addEventListener('click', function(e){
+    if(e.target.closest('[data-done]')){
+      if(!(UI.devPick.p1 && UI.devPick.plug)) return;
+      INST.p1 = UI.devPick.p1; INST.plug = UI.devPick.plug;
+      S.mode = S.mode; control();
+      if(UI.ret==='main'){ S.screen='main'; } else note('Apparaten gekoppeld', devById(INST.p1).name+' en stekker "'+devById(INST.plug).name+'" worden onthouden.', UI.ret);
+      setupKey=''; render(); return;
+    }
+    var b=e.target.closest('[data-dev]'); if(!b || b.disabled) return;
+    var d=devById(b.dataset.dev);
+    if(d.type==='p1') UI.devPick.p1 = d.id; else UI.devPick.plug = d.id;
+    setupKey=''; render();
+  });
+  $('msgOk').addEventListener('click', function(){ var back = UI.msg && UI.msg.back; UI.msg=null; S.screen = back==='main' || !back ? 'main' : back; if(!configured()) S.screen='main'; setupKey=''; render(); });
+  $('btnMove').addEventListener('click', function(){
+    arrive(INST.place==='thuis' ? 'schoonbroer' : 'thuis');
+    S.screen='main'; UI.msg=null; setupKey=''; control(); render();
+  });
 
   // ----- sizing of the device on the stage
   var view = store('laadsim.view')==='real' ? 'real' : 'fit';
@@ -640,15 +891,15 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
   // ----- wiring
   $('modeTile').addEventListener('click', function(){ S.screen='menu'; render(); });
   $('menuClose').addEventListener('click', function(){ S.screen='main'; render(); });
-  $('menuSet').addEventListener('click', function(){ S.setTmp={dev:S.dev, pw:{wagen:S.pw.wagen, zwembad:S.pw.zwembad}}; S.screen='set'; render(); });
+  $('menuSet').addEventListener('click', function(){ S.screen='setmenu'; setupKey=''; render(); });
   $('setWagen').addEventListener('click', function(){ S.setTmp.dev='wagen'; render(); });
   $('setZwembad').addEventListener('click', function(){ S.setTmp.dev='zwembad'; render(); });
   $('pwMinus').addEventListener('click', function(){ var k=S.setTmp.dev; S.setTmp.pw[k]=Math.max(PW_MIN,Math.round((S.setTmp.pw[k]-0.1)*10)/10); render(); });
   $('pwPlus').addEventListener('click', function(){ var k=S.setTmp.dev; S.setTmp.pw[k]=Math.min(PW_MAX,Math.round((S.setTmp.pw[k]+0.1)*10)/10); render(); });
-  $('setCancel').addEventListener('click', function(){ S.setTmp=null; S.screen='main'; render(); });
+  $('setCancel').addEventListener('click', function(){ S.setTmp=null; S.screen=UI.ret==='main'?'main':'setmenu'; setupKey=''; render(); });
   $('setOk').addEventListener('click', function(){
     var changed = S.setTmp.dev !== S.dev;
-    S.dev=S.setTmp.dev; S.pw=S.setTmp.pw; S.setTmp=null; S.screen='main';
+    S.dev=S.setTmp.dev; S.pw=S.setTmp.pw; S.setTmp=null; S.screen=UI.ret==='main'?'main':'setmenu'; setupKey='';
     if(changed){ S.carFull=false; S.full=false; S.belowSince=null; if(S.plugOn) S.plugSince=S.t; }
     if(S.plugOn && S.draw>0) S.draw=P();
     control(); render();
