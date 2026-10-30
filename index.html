@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Laadsturing simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@600;700&family=JetBrains+Mono:wght@500;700&family=Montserrat:wght@600;700;800&display=swap">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<style>
+/* Layout: landscape workbench — the device on a matte stage at left, the simulation controls as a narrow column at right. */
+:root{
+  --bg:#ECEFF3; --surface:#FFFFFF; --stage:#DCE1E8; --ink:#17202B; --muted:#566273; --line:#D3D9E1;
+  --accent:#2356C2; --accent-ink:#FFFFFF; --accent-soft:#E3EBFA; --warn:#9A5B00; --warn-soft:#FBEFD9;
+  --f-display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  /* device colours: the screen looks the same in both page themes */
+  --d-bg:#0D1015; --d-tile:#171C24; --d-line:#252C37; --d-line2:#2A313C; --d-ink:#EEF1F5; --d-muted:#A9B1BC;
+  --d-green:#4ADE80; --d-orange:#FB923C; --d-amber:#FBBF24; --d-red:#F87171; --d-blue:#60A5FA; --d-grey:#9CA3AF; --d-white:#F3F4F6;
+  --case:#121417; --case-hi:#24282E;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1217; --surface:#171D25; --stage:#11161C; --ink:#E7EBF0; --muted:#9BA6B5; --line:#29313C;
+  --accent:#7EA4F6; --accent-ink:#0E1217; --accent-soft:#1D2A44; --warn:#F2B24C; --warn-soft:#3A2C12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1217; --surface:#171D25; --stage:#11161C; --ink:#E7EBF0; --muted:#9BA6B5; --line:#29313C;
+  --accent:#7EA4F6; --accent-ink:#0E1217; --accent-soft:#1D2A44; --warn:#F2B24C; --warn-soft:#3A2C12; color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);gap:16px;min-height:100%;
+  padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* ---------- stage ---------- */
+.stage{position:sticky;top:max(16px,env(safe-area-inset-top,0px));align-self:start;background:var(--stage);border-radius:14px;
+  padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0;height:calc(100dvh - 32px);min-height:260px}
+.stage-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.stage-top h1{font-family:var(--f-display);font-size:22px;line-height:1.1;margin:0;letter-spacing:.01em}
+.stage-top span{font-size:13px;color:var(--muted)}
+.stage-body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto}
+.stage-note{margin:0;font-size:13px;color:var(--muted)}
+.dev-wrap{position:relative;flex:none}
+.device{position:absolute;left:0;top:0;width:422px;height:312px;transform-origin:0 0}
+.bezel{width:422px;height:312px;border-radius:22px;padding:36px 51px;
+  background:linear-gradient(160deg,var(--case-hi),var(--case) 40%);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 14px 30px rgba(10,14,20,.28)}
+.glass{width:320px;height:240px;border-radius:3px;outline:4px solid #050608;position:relative;overflow:hidden;background:var(--d-bg)}
+.card-ref{flex:none;border:2px dashed var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;
+  text-align:center;color:var(--accent);font-weight:600;font-size:13px;padding:8px}
+
+/* ---------- device screen (320 x 240 px) ---------- */
+.scr{position:absolute;inset:0;font-family:Montserrat,system-ui,sans-serif;color:var(--d-ink)}
+:where(.scr button){font-family:inherit;cursor:pointer;border:0;padding:0;background:none}
+.view{position:absolute;inset:0;padding:8px;display:flex;flex-direction:column;gap:6px;background:var(--d-bg)}
+.row1{display:flex;gap:6px;height:112px}
+.tile{background:var(--d-tile);border:1px solid var(--d-line);border-radius:12px}
+.net{flex:1;min-width:0;padding:9px 12px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.d-lbl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--d-muted)}
+.big{display:flex;align-items:baseline;gap:5px}
+.big b{font-size:58px;font-weight:800;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.big i{font-style:normal;font-size:18px;font-weight:700;color:var(--d-muted)}
+.mode-tile{width:92px;flex:none;border-radius:12px;background:var(--d-tile);border:2px solid currentColor;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.mode-tile .nm{font-size:14px;font-weight:800}
+.mode-tile .st{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;flex:1}
+.mini{padding:9px 11px;display:flex;flex-direction:column;justify-content:center;gap:5px;text-align:left;color:var(--d-ink)}
+button.mini{background:var(--d-tile);border:1px solid var(--d-line);border-radius:12px}
+.mini .t{font-size:12px;font-weight:700;color:var(--d-muted);display:flex;justify-content:space-between;align-items:center}
+.mini .v{display:flex;align-items:baseline;gap:4px}
+.mini .v b{font-size:32px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.mini .v i{font-style:normal;font-size:13px;font-weight:700;color:var(--d-muted)}
+.mini .s{font-size:11px;font-weight:600;color:var(--d-muted);white-space:nowrap}
+.bar{height:6px;border-radius:3px;background:var(--d-line2);overflow:hidden}
+.bar i{display:block;height:6px;border-radius:3px;width:0}
+.bar.empty{background:transparent}
+.vhead{display:flex;justify-content:space-between;align-items:center;height:36px}
+.vhead b{font-size:15px;font-weight:800;padding-left:4px}
+.xbtn{width:40px;height:36px;border-radius:9px;background:var(--d-tile);border:2px solid var(--d-line2);
+  display:flex;align-items:center;justify-content:center;color:var(--d-ink)}
+.mgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:6px;flex:1}
+.mbtn{border-radius:12px;display:flex;align-items:center;gap:10px;padding:0 12px;text-align:left;border:2px solid var(--d-line2);background:var(--d-tile)}
+.mbtn .n{font-size:15px;font-weight:800;display:block}
+.mbtn .d{font-size:10px;font-weight:600;opacity:.85;display:block}
+.mbtn.on{color:var(--d-bg)}
+.lim{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pm{width:84px;height:84px;border-radius:14px;background:var(--d-tile);border:2px solid var(--d-line2);
+  color:var(--d-ink);display:flex;align-items:center;justify-content:center}
+.pm:disabled{opacity:.35;cursor:default}
+.limv{text-align:center}
+.limv b{display:block;font-size:46px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.limv span{font-size:12px;font-weight:700;color:var(--d-muted)}
+.limrow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.okb{height:44px;border-radius:10px;font-size:14px;font-weight:800;border:2px solid var(--d-line2);background:var(--d-tile);color:var(--d-ink)}
+.okb.go{background:var(--d-green);border-color:var(--d-green);color:var(--d-bg)}
+.chip{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--d-muted)}
+.hbtns{display:flex;gap:6px}
+.setrow{display:flex;align-items:center;gap:8px}
+.setrow .k{width:74px;flex:none;font-size:11px;font-weight:700;color:var(--d-muted)}
+.devb{flex:1;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:800;
+  background:var(--d-tile);border:2px solid var(--d-line2);color:var(--d-ink)}
+.devb.on{background:var(--d-ink);border-color:var(--d-ink);color:var(--d-bg)}
+.pms{width:56px;height:48px;border-radius:10px;background:var(--d-tile);border:2px solid var(--d-line2);color:var(--d-ink);display:flex;align-items:center;justify-content:center}
+.pms:disabled{opacity:.35;cursor:default}
+.setv{flex:1;text-align:center;font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.setv i{font-style:normal;font-size:13px;color:var(--d-muted);margin-left:3px}
+.limnote{font-size:10px;font-weight:600;color:var(--d-muted);text-align:center}
+
+/* ---------- control panel ---------- */
+.panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.blk{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.blk h2{font-family:var(--f-display);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+.blk-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.badge{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.clockrow{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.clock{font-family:var(--f-mono);font-weight:700;font-size:34px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.qinfo{flex:1;min-width:150px;display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.qbar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.qbar i{display:block;height:8px;width:0;background:var(--accent);border-radius:4px}
+.ctrls{display:flex;gap:8px;flex-wrap:wrap}
+.btn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:600;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);min-width:96px}
+.btn.wide{width:100%}
+.btn.on{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:1;min-width:180px}
+.seg button{flex:1;min-height:44px;border:0;background:var(--surface);font-weight:600;cursor:pointer;font-variant-numeric:tabular-nums}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.sl{display:flex;justify-content:space-between;gap:10px;font-weight:600}
+.sl output{font-variant-numeric:tabular-nums;font-weight:600}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
+.scale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:-6px}
+.kv{display:flex;justify-content:space-between;gap:10px}
+.kv span{color:var(--muted)}
+.kv b{font-weight:600;font-variant-numeric:tabular-nums}
+.hint{margin:0;font-size:13px;color:var(--muted)}
+.why p{margin:0}
+.rules{margin:0;padding-left:18px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+
+/* ---------- portrait phones ---------- */
+.rotate{position:fixed;inset:0;z-index:20;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;
+  padding:max(24px,env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px))}
+.rotate h2{font-family:var(--f-display);font-size:26px;margin:0}
+.rotate p{margin:0;max-width:30ch;color:var(--muted)}
+@media (orientation:portrait) and (max-width:700px){ body:not(.portrait-ok) .rotate{display:flex} }
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr) minmax(260px,.9fr);gap:12px}
+  .stage{padding:10px}
+}
+@media (max-width:560px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .stage{position:static;height:auto;min-height:0}
+  .stage-body{flex:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <section class="stage" aria-label="Scherm van de laadsturing">
+    <div class="stage-top"><h1>Laadsturing</h1><span id="stageLbl">2,8 inch · 320 x 240 pixels</span></div>
+    <div class="stage-body" id="stageBody">
+      <div class="dev-wrap" id="devWrap">
+        <div class="device" id="device">
+          <div class="bezel"><div class="glass"><div class="scr">
+
+            <!-- main screen -->
+            <div class="view" id="vMain">
+              <div class="row1">
+                <div class="tile net">
+                  <div class="d-lbl"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="netArrow"></path></svg><span id="netLbl">Injectie</span><span class="chip" id="devChip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="devIcon"></path></svg><span id="devName">Wagen</span></span></div>
+                  <div class="big"><b id="netVal">0,00</b><i>kW</i></div>
+                </div>
+                <button type="button" class="mode-tile" id="modeTile">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="modeIcon"></path></svg>
+                  <span class="nm" id="modeName">Zon</span>
+                  <span class="st" id="modeSt"><span class="dot"></span><span id="modeStTxt">pauze</span></span>
+                </button>
+              </div>
+              <div class="row2">
+                <button type="button" class="mini" id="peakTile" aria-label="Kwartierpiek, tik om de limiet te wijzigen">
+                  <span class="t">Kwartierpiek <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4"></path></svg></span>
+                  <span class="v"><b id="peakVal">0,00</b><i>kW</i></span>
+                  <span class="bar"><i id="peakBar"></i></span>
+                  <span class="s" id="peakSub"></span>
+                </button>
+                <div class="tile mini">
+                  <span class="t">Maandpiek</span>
+                  <span class="v"><b id="monthVal">0,00</b><i>kW</i></span>
+                  <span class="bar empty"></span>
+                  <span class="s" id="monthSub"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- mode menu -->
+            <div class="view" id="vMenu" hidden>
+              <div class="vhead"><b>Kies modus</b>
+                <span class="hbtns"><button type="button" class="xbtn" id="menuSet" aria-label="Instellingen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6a3 3 0 1 0 0 6zM12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"></path></svg></button>
+                <button type="button" class="xbtn" id="menuClose" aria-label="Sluiten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></span>
+              </div>
+              <div class="mgrid" id="mgrid"></div>
+            </div>
+
+            <!-- limit editor -->
+            <div class="view" id="vLimit" hidden>
+              <div class="vhead"><b>Limiet kwartierpiek</b></div>
+              <div class="lim">
+                <button type="button" class="pm" id="limMinus" aria-label="0,1 kW lager"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+                <div class="limv"><b id="limVal">3,5</b><span>kW</span></div>
+                <button type="button" class="pm" id="limPlus" aria-label="0,1 kW hoger"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+              </div>
+              <div class="limnote">Minimum 2,5 kW: lager levert bij het capaciteitstarief niets op</div>
+              <div class="limrow">
+                <button type="button" class="okb" id="limCancel">Annuleer</button>
+                <button type="button" class="okb go" id="limOk">OK</button>
+              </div>
+            </div>
+
+            <!-- settings -->
+            <div class="view" id="vSet" hidden>
+              <div class="vhead"><b>Instellingen</b></div>
+              <div class="setrow"><span class="k">Aan de stekker</span>
+                <button type="button" class="devb" data-dev="wagen" id="setWagen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="icWagen"></path></svg>Wagen</button>
+                <button type="button" class="devb" data-dev="zwembad" id="setZwembad"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="icZwembad"></path></svg>Zwembad</button>
+              </div>
+              <div class="setrow"><span class="k">Vermogen</span>
+                <button type="button" class="pms" id="pwMinus" aria-label="0,1 kW lager"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+                <span class="setv"><span id="pwVal">1,3</span><i>kW</i></span>
+                <button type="button" class="pms" id="pwPlus" aria-label="0,1 kW hoger"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+              </div>
+              <div class="limnote" id="pwNote">Laatst gemeten door de stekker: nog niets</div>
+              <div class="limrow">
+                <button type="button" class="okb" id="setCancel">Annuleer</button>
+                <button type="button" class="okb go" id="setOk">OK</button>
+              </div>
+            </div>
+
+          </div></div></div>
+        </div>
+      </div>
+      <div class="card-ref" id="cardRef" hidden>Bankkaart<br>85,6 x 54 mm<br>leg je kaart hierop</div>
+    </div>
+    <p class="stage-note" id="stageNote">Tik op het scherm zoals op het echte toestel: op de modus om te wisselen, op de kwartierpiek om de limiet te wijzigen. Het tandwiel in het modusmenu opent de instellingen voor toestel en vermogen.</p>
+  </section>
+
+  <section class="panel" aria-label="Simulatie">
+    <div class="blk">
+      <div class="blk-h"><h2>Tijd</h2><span class="badge" id="demoBadge" hidden>Demodag loopt</span></div>
+      <div class="clockrow">
+        <div class="clock" id="clock">12:00:00</div>
+        <div class="qinfo">
+          <span id="qLbl">Kwartier 12:00 tot 12:15</span>
+          <span class="qbar"><i id="qBar"></i></span>
+          <span id="qAvg">gemiddelde afname tot nu 0,00 kW</span>
+        </div>
+      </div>
+      <div class="ctrls">
+        <button type="button" class="btn primary" id="btnRun">Start</button>
+        <button type="button" class="btn" id="btnReset">Reset</button>
+        <div class="seg" role="group" aria-label="Versnelling" id="speedSeg">
+          <button type="button" data-speed="1">1x</button><button type="button" data-speed="10">10x</button><button type="button" data-speed="60">60x</button><button type="button" data-speed="300">300x</button>
+        </div>
+      </div>
+      <button type="button" class="btn wide" id="btnDemo">Demodag starten</button>
+      <p class="hint">Een zonnige dag van 06:00 tot 22:00, met wolken, een wasmachine en koken. Loopt op 60x; zet 300x voor de hele dag in drie minuten.</p>
+    </div>
+
+    <div class="blk why">
+      <h2>Wat doet de laadsturing nu?</h2>
+      <p id="why">De lader staat uit.</p>
+    </div>
+
+    <div class="blk">
+      <h2>Huis en zonnepanelen</h2>
+      <label class="sl" for="base"><span>Net zonder stekker</span><output id="baseOut" for="base"></output></label>
+      <input type="range" id="base" min="-6" max="6" step="0.1" value="-1.8">
+      <div class="scale"><span>6 kW injectie</span><span>0</span><span>6 kW afname</span></div>
+    </div>
+
+    <div class="blk">
+      <h2>Aan de stekker</h2>
+      <div class="kv"><span>Toestel</span><b id="devOut">Wagen</b></div>
+      <div class="kv"><span>Ingesteld vermogen</span><b id="pwOut">1,3 kW</b></div>
+      <div class="kv"><span>Trekt nu</span><b id="drawOut">0,00 kW</b></div>
+      <button type="button" class="btn wide" id="btnFull">Wagen is vol</button>
+      <p class="hint" id="fullHint"></p>
+      <p class="hint">Toestel en vermogen stel je in op het scherm zelf: tik op de modus en dan op het tandwiel.</p>
+    </div>
+
+    <div class="blk">
+      <h2>Maandpiek</h2>
+      <label class="sl" for="mstart"><span>Maandpiek bij de start</span><output id="mOut" for="mstart"></output></label>
+      <input type="range" id="mstart" min="2.5" max="8" step="0.1" value="3.4">
+    </div>
+
+    <div class="blk">
+      <h2>Weergave</h2>
+      <div class="seg" role="group" aria-label="Weergave" id="viewSeg">
+        <button type="button" data-view="fit">Vergroot</button><button type="button" data-view="real">Ware grootte</button>
+      </div>
+      <div id="calBox" hidden>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <p class="hint">Ware grootte klopt pas na één keer kalibreren op dit toestel. Tik op "Kalibreren", leg een bankkaart op de omtrek en schuif tot ze precies past.</p>
+          <button type="button" class="btn wide" id="btnCal">Kalibreren met bankkaart</button>
+          <div id="calSlide" hidden>
+            <label class="sl" for="cal"><span>Kaartgrootte</span><output id="calOut" for="cal"></output></label>
+            <input type="range" id="cal" min="2" max="9" step="0.01" value="3.78">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="blk">
+      <h2>Regels in deze simulatie</h2>
+      <ul class="rules">
+        <li>Zon: aan bij een overschot van het ingestelde vermogen plus 0,1 kW, uit zodra je weer afneemt.</li>
+        <li>Zon: minstens 5 minuten aan en 5 minuten uit, tegen het pendelen bij wolken. Voor de zwembadpomp 10 minuten, om de compressor te sparen.</li>
+        <li>Piek: alleen laden als de voorspelde kwartierpiek onder de limiet blijft.</li>
+        <li>Kwartierpiek telt enkel afname; injectie trekt er niets van af.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<div class="rotate" id="rotate" role="dialog" aria-label="Draai je toestel">
+  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M2 14a8 8 0 0 0 7 7M5 21l4 0 0-4"></path></svg>
+  <h2>Draai je gsm</h2>
+  <p>De simulator is gemaakt voor een liggend scherm: het display links, de bediening rechts.</p>
+  <button type="button" class="btn" id="portraitOk">Toch rechtop bekijken</button>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  // what can hang on the plug; power is set on the device itself
+  var DEV = {
+    wagen:   {n:'Wagen',   who:'de wagen',          run:'laadt',  done:'vol',     doneLong:'de wagen is vol',                 start:'de wagen begint zo te laden', delay:30, min:300,
+              i:'M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M3 11h18v6H3zM6 17v2M18 17v2M7 14h.01M17 14h.01',
+              btnOn:'Wagen is vol', btnOff:'Wagen terug leeg maken', hint:'Het toestel ziet "vol" als de stekker aan staat maar de wagen 2 minuten lang bijna niets meer trekt.'},
+    zwembad: {n:'Zwembad', who:'de zwembadpomp',     run:'draait', done:'op temp', doneLong:'het zwembad is op temperatuur',   start:'de pomp start zo',            delay:60, min:600,
+              i:'M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M8 3v6M16 3v6M8 6h8',
+              btnOn:'Zwembad is op temperatuur', btnOff:'Zwembad koelt weer af', hint:'De thermostaat van de pomp stopt zelf. Het toestel ziet "op temp" als de stekker aan staat maar de pomp 2 minuten bijna niets trekt.'}
+  };
+  var PW_MIN = 0.5, PW_MAX = 3.6;   // HomeWizard energy socket: max 16 A
+  function D(){ return DEV[S.dev]; }
+  function P(){ return S.pw[S.dev]; }
+  var FULL_AFTER = 120;         // s below 50 W before "vol"
+  var ZON_OFF = 0.2;            // kW import that switches off
+  var PIEK_MIN_OFF = 60;
+  var SCREEN_MM = 57.6;         // active area width of the 2,8 inch panel
+
+  var MODES = {
+    zon:  {n:'Zon',    d:'enkel op overschot', c:'#4ADE80', i:'M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8z'},
+    piek: {n:'Piek',   d:'onder de limiet',    c:'#60A5FA', i:'M3 17l5-6 4 3 5-7 4 4M3 21h18'},
+    aan:  {n:'Altijd', d:'stekker altijd aan',       c:'#F3F4F6', i:'M13 2L4 14h7l-1 8 9-12h-7z'},
+    uit:  {n:'Uit',    d:'stekker altijd uit',         c:'#9CA3AF', i:'M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0'}
+  };
+  var ORDER = ['zon','piek','aan','uit'];
+  var ARROW_UP = 'M12 19V5M5 12l7-7 7 7', ARROW_DN = 'M12 5v14M5 12l7 7 7-7';
+
+  var $ = function(id){ return document.getElementById(id); };
+  var fmt = function(n,d){ return (Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toFixed(d).replace('.',','); };
+  var pad = function(n){ return (n<10?'0':'')+n; };
+  var hm = function(t){ t=((t%86400)+86400)%86400; return pad(Math.floor(t/3600))+':'+pad(Math.floor(t/60)%60); };
+  var hms = function(t){ t=((Math.floor(t)%86400)+86400)%86400; return hm(t)+':'+pad(t%60); };
+  var ms = function(s){ s=Math.max(0,Math.ceil(s)); return Math.floor(s/60)+':'+pad(s%60); };
+
+  function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
+
+  var S;
+  function fresh(){
+    var mstart = parseFloat($('mstart').value);
+    S = { t:12*3600, running:false, speed:S?S.speed:10, mode:S?S.mode:'zon', limit:S?S.limit:3.5,
+      monthPeak:mstart, monthWhen:null, base:parseFloat($('base').value), demo:false, carFull:false,
+      dev:S?S.dev:'wagen', pw:S?S.pw:{wagen:1.3, zwembad:1.0}, measured:S?S.measured:{wagen:null, zwembad:null}, setTmp:null,
+      plugOn:false, plugSince:-1e9, offSince:-1e9, lastSwitch:-1e9, hold:0, wait:0, draw:0, belowSince:null, full:false,
+      q:Math.floor(12*3600/900), E:0, ema:null, emaNet:null, screen:'main', limTmp:3.5, acc:0, done:false };
+    S.ema = -S.base; S.emaNet = S.base;
+  }
+
+  // ----- demo day profile: kW drawn from the grid without the charger (negative = injection)
+  function win(h,a,b,ramp){ ramp=ramp||1/60; if(h<a-ramp||h>b+ramp) return 0; if(h<a) return (h-(a-ramp))/ramp; if(h>b) return ((b+ramp)-h)/ramp; return 1; }
+  function demoBase(t){
+    var h = ((t%86400)+86400)%86400/3600;
+    var house = 0.35 + 1.8*win(h,7,7.33) + 2.0*win(h,8.5,8.83) + 0.3*win(h,8.83,9.6) + 1.5*win(h,12.25,12.5)
+              + 2.8*win(h,18,18.83) + 0.4*win(h,20,21.5);
+    var sun = 0;
+    if(h>7.5 && h<19.5) sun = 5.0*Math.pow(Math.sin(Math.PI*(h-7.5)/12),1.3);
+    var cloud = 1 - 0.65*win(h,10.67,10.87) - 0.5*win(h,11.5,11.57) - 0.7*win(h,12.83,13.08)
+                  - 0.55*win(h,14.33,14.47) - 0.6*win(h,15.67,16.08);
+    var wobble = 0.06*Math.sin(t/37) + 0.04*Math.sin(t/11.3);
+    return house - sun*cloud + wobble;
+  }
+
+  function predict(power){ var rem = 900 - (S.t%900); return (S.E + Math.max(power,0)*rem)/900; }
+
+  function setPlug(on){
+    if(on===S.plugOn) return;
+    S.plugOn = on; S.lastSwitch = S.t;
+    if(on){ S.plugSince = S.t; S.belowSince = null; S.full = false; }
+    else { S.offSince = S.t; S.belowSince = null; S.full = false; }
+  }
+
+  // one simulated second
+  function step(){
+    var qNow = Math.floor(S.t/900);
+    if(qNow !== S.q){
+      var avg = S.E/900;
+      if(avg > S.monthPeak + 1e-9){ S.monthPeak = avg; S.monthWhen = S.q*900; }
+      S.q = qNow; S.E = 0;
+    }
+    if(S.demo){
+      S.base = demoBase(S.t);
+      if(((S.t%86400)+86400)%86400 >= 22*3600){ S.demo=false; S.running=false; S.done=true; }
+    }
+    // car
+    if(S.plugOn && !S.carFull && S.t - S.plugSince >= D().delay){ S.draw = P(); S.measured[S.dev] = P(); }
+    else if(S.plugOn && S.carFull) S.draw = 0.02;
+    else S.draw = 0;
+    var net = S.base + S.draw;
+    S.E += Math.max(net,0);
+    S.ema += (-S.base - S.ema)/30;
+    S.emaNet += (net - S.emaNet)/30;
+    // full detection
+    if(S.plugOn && S.t - S.plugSince > FULL_AFTER && S.draw < 0.05){
+      if(S.belowSince===null) S.belowSince = S.t;
+      if(S.t - S.belowSince >= FULL_AFTER) S.full = true;
+    } else if(S.draw >= 0.05){ S.belowSince = null; S.full = false; }
+    control();
+    S.t += 1;
+  }
+
+  // what the device decides; returns nothing, sets S.wait for the display
+  function control(){
+    S.wait = 0; S.hold = 0;
+    var m = S.mode;
+    if(m==='aan'){ setPlug(true); return; }
+    if(m==='uit'){ setPlug(false); return; }
+    if(m==='zon'){
+      if(S.plugOn){
+        if(S.emaNet > ZON_OFF){
+          if(S.t - S.lastSwitch >= D().min) setPlug(false);
+          else S.hold = D().min - (S.t - S.lastSwitch);
+        }
+      } else {
+        if(S.ema >= P() + 0.1){
+          if(S.t - S.lastSwitch >= D().min) setPlug(true);
+          else S.wait = D().min - (S.t - S.lastSwitch);
+        }
+      }
+      return;
+    }
+    if(m==='piek'){
+      var rem = 900 - (S.t%900);
+      if(S.plugOn){
+        if(predict(S.base + S.draw) > S.limit) setPlug(false);
+      } else {
+        var withCh = (S.E + Math.max(S.base + P(),0)*rem)/900;
+        if(withCh <= S.limit - 0.1){
+          if(S.t - S.lastSwitch >= PIEK_MIN_OFF) setPlug(true);
+          else S.wait = PIEK_MIN_OFF - (S.t - S.lastSwitch);
+        }
+      }
+    }
+  }
+
+  function setMode(m){
+    S.mode = m;
+    control();
+    S.lastSwitch = -1e9;   // a manual choice is not held back by the anti-pendel timers
+    control();
+  }
+
+  // ----- display
+  var mgrid = $('mgrid');
+  ORDER.forEach(function(k){
+    var b = document.createElement('button'); b.type='button'; b.className='mbtn'; b.dataset.mode=k;
+    b.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+MODES[k].i+'"></path></svg>'
+      + '<span><span class="n">'+MODES[k].n+'</span><span class="d">'+MODES[k].d+'</span></span>';
+    b.addEventListener('click', function(){ setMode(k); S.screen='main'; render(); });
+    mgrid.appendChild(b);
+  });
+
+  $('icWagen').setAttribute('d', DEV.wagen.i);
+  $('icZwembad').setAttribute('d', DEV.zwembad.i);
+
+  function statusOf(){
+    var m = S.mode;
+    if(m==='uit') return {txt:'uit', c:'#9CA3AF'};
+    if(S.plugOn && S.full) return {txt:D().done, c:'#60A5FA'};
+    if(S.plugOn && S.draw >= 0.05) return {txt:D().run, c:'#4ADE80'};
+    if(S.plugOn) return {txt:'start', c:'#FBBF24'};
+    if(S.wait > 0) return {txt:'wacht '+ms(S.wait), c:'#FBBF24'};
+    return {txt:'pauze', c:'#9CA3AF'};
+  }
+
+  function whyText(){
+    var m = S.mode, surplus = -S.base, d = D(), p = P(), who = d.who, Who = who.charAt(0).toUpperCase()+who.slice(1);
+    var minTxt = Math.round(d.min/60)+' minuten';
+    if(m==='uit') return 'Modus Uit: de stekker blijft uit, wat het net ook doet.';
+    if(m==='aan'){
+      if(S.full) return 'Modus Altijd: de stekker staat aan, maar '+d.doneLong+'.';
+      return S.draw>0 ? 'Modus Altijd: de stekker staat aan en '+who+' '+d.run+', ook als dat afname van het net betekent.'
+                      : 'Modus Altijd: de stekker is net aangezet, '+d.start+'.';
+    }
+    if(m==='zon'){
+      if(S.plugOn){
+        if(S.full) return 'Modus Zon: de stekker staat aan, maar '+d.doneLong+'.';
+        if(S.emaNet > ZON_OFF && S.hold > 0) return 'Modus Zon: er is niet genoeg zon meer, maar '+who+' blijft nog '+ms(S.hold)+' aan. Zo schakelt de stekker niet bij elke wolk.';
+        if(S.draw===0) return 'Modus Zon: '+fmt(surplus,2)+' kW overschot is genoeg. De stekker is aan, '+d.start+'.';
+        return 'Modus Zon: '+who+' '+d.run+' op overschot. '+(Math.abs(S.base+S.draw)<0.05 ? 'Het net staat nu op nul.' : S.base+S.draw<0? 'Er gaat nog '+fmt(-(S.base+S.draw),2)+' kW extra naar het net.' : 'Er komt '+fmt(S.base+S.draw,2)+' kW van het net, binnen de marge.');
+      }
+      if(S.wait > 0) return 'Modus Zon: '+fmt(surplus,2)+' kW overschot is genoeg, maar de stekker wacht nog '+ms(S.wait)+'. Hij moet eerst '+minTxt+' uit geweest zijn.';
+      return 'Modus Zon: '+(surplus>0? 'maar '+fmt(surplus,2)+' kW overschot' : 'geen overschot')+'. '+Who+' start pas vanaf '+fmt(p+0.1,1)+' kW.';
+    }
+    var rem = 900-(S.t%900), withCh = (S.E + Math.max(S.base+p,0)*rem)/900;
+    if(S.plugOn){
+      if(S.full) return 'Modus Piek: de stekker staat aan, maar '+d.doneLong+'.';
+      return 'Modus Piek: met '+who+' aan komt het kwartier op '+fmt(predict(S.base+S.draw),2)+' kW, onder de limiet van '+fmt(S.limit,1)+' kW.';
+    }
+    if(S.wait > 0) return 'Modus Piek: '+who+' past weer onder de limiet en start over '+ms(S.wait)+'.';
+    return 'Modus Piek: met '+who+' aan zou het kwartier op '+fmt(withCh,2)+' kW komen, boven de limiet van '+fmt(S.limit,1)+' kW. De stekker wacht.';
+  }
+
+  function render(){
+    var net = S.base + S.draw;
+    // views
+    $('vMain').hidden = S.screen!=='main';
+    $('vMenu').hidden = S.screen!=='menu';
+    $('vLimit').hidden = S.screen!=='limit';
+    $('vSet').hidden = S.screen!=='set';
+    $('devIcon').setAttribute('d', D().i);
+    $('devName').textContent = D().n;
+    if(S.setTmp){
+      ['wagen','zwembad'].forEach(function(k){ var b=$(k==='wagen'?'setWagen':'setZwembad'); var on=S.setTmp.dev===k; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on?'true':'false'); });
+      var tp = S.setTmp.pw[S.setTmp.dev];
+      $('pwVal').textContent = fmt(tp,1);
+      $('pwMinus').disabled = tp <= PW_MIN+1e-9; $('pwPlus').disabled = tp >= PW_MAX-1e-9;
+      var meas = S.measured[S.setTmp.dev];
+      $('pwNote').textContent = meas===null ? 'De stekker meet het echte vermogen zodra het toestel draait' : 'Laatst gemeten door de stekker: '+fmt(meas,2)+' kW';
+    }
+    // net
+    var zero = Math.abs(net) < 0.005, inj = net < 0;
+    var nc = zero ? '#EEF1F5' : inj ? '#4ADE80' : '#FB923C';
+    $('netLbl').textContent = zero ? 'Net' : inj ? 'Injectie' : 'Afname';
+    $('netVal').textContent = fmt(Math.abs(net),2);
+    $('netVal').style.color = nc;
+    $('netArrow').setAttribute('d', zero ? 'M5 12h14' : inj ? ARROW_UP : ARROW_DN);
+    $('netArrow').parentNode.setAttribute('stroke', nc);
+    // mode tile
+    var M = MODES[S.mode], st = statusOf();
+    $('modeTile').style.color = M.c;
+    $('modeIcon').setAttribute('d', M.i);
+    $('modeName').textContent = M.n;
+    $('modeSt').style.color = st.c;
+    $('modeStTxt').textContent = st.txt;
+    $('modeTile').setAttribute('aria-label','Modus '+M.n+', '+D().n+' '+st.txt+'. Tik om te wijzigen.');
+    // peak
+    var pred = predict(net), ratio = pred/S.limit;
+    var pc = ratio>=1 ? '#F87171' : ratio>=0.8 ? '#FBBF24' : '#4ADE80';
+    $('peakVal').textContent = fmt(pred,2); $('peakVal').style.color = pc;
+    $('peakBar').style.width = Math.min(100,Math.round(ratio*100))+'%'; $('peakBar').style.background = pc;
+    $('peakSub').textContent = 'nog '+ms(900-(S.t%900))+' · max '+fmt(S.limit,1);
+    // month
+    $('monthVal').textContent = fmt(S.monthPeak,2);
+    if(pred > S.monthPeak){ $('monthSub').textContent = 'wordt '+fmt(pred,2)+' kW'; $('monthSub').style.color = '#FBBF24'; }
+    else { $('monthSub').textContent = S.monthWhen===null ? 'stand bij de start' : 'vandaag '+hm(S.monthWhen); $('monthSub').style.color = ''; }
+    // menu
+    Array.prototype.forEach.call(mgrid.children, function(b){
+      var k=b.dataset.mode, on=k===S.mode, c=MODES[k].c;
+      b.classList.toggle('on',on); b.setAttribute('aria-pressed',on?'true':'false');
+      b.style.background = on ? c : ''; b.style.borderColor = on ? c : ''; b.style.color = on ? '#0D1015' : c;
+    });
+    // limit editor
+    $('limVal').textContent = fmt(S.limTmp,1);
+    $('limMinus').disabled = S.limTmp <= 2.5 + 1e-9;
+    $('limPlus').disabled = S.limTmp >= 10 - 1e-9;
+    // panel
+    $('clock').textContent = hms(S.t);
+    var q0 = Math.floor(S.t/900)*900, into = S.t%900;
+    $('qLbl').textContent = 'Kwartier '+hm(q0)+' tot '+hm(q0+900);
+    $('qBar').style.width = (into/900*100).toFixed(1)+'%';
+    $('qAvg').textContent = 'gemiddelde afname tot nu '+fmt(into? S.E/into : Math.max(net,0),2)+' kW';
+    $('btnRun').textContent = S.running ? 'Pauze' : (S.t===12*3600 && !S.done ? 'Start' : 'Verder');
+    $('demoBadge').hidden = !S.demo;
+    $('demoBadge').textContent = 'Demodag loopt';
+    if(S.done){ $('demoBadge').hidden=false; $('demoBadge').textContent='Demodag klaar'; }
+    Array.prototype.forEach.call($('speedSeg').children, function(b){ b.setAttribute('aria-pressed', +b.dataset.speed===S.speed?'true':'false'); });
+    if(S.demo && document.activeElement!==$('base')) $('base').value = Math.max(-6,Math.min(6,S.base)).toFixed(1);
+    $('baseOut').textContent = S.base<0 ? fmt(-S.base,2)+' kW injectie' : fmt(S.base,2)+' kW afname';
+    $('drawOut').textContent = fmt(S.draw,2)+' kW';
+    $('btnFull').textContent = S.carFull ? D().btnOff : D().btnOn;
+    $('fullHint').textContent = D().hint;
+    $('devOut').textContent = D().n==='Wagen' ? 'Wagen' : 'Warmtepomp zwembad';
+    $('pwOut').textContent = fmt(P(),1)+' kW';
+    $('btnFull').classList.toggle('on', S.carFull);
+    $('mOut').textContent = fmt(parseFloat($('mstart').value),1)+' kW';
+    $('why').textContent = whyText();
+  }
+
+  // ----- sizing of the device on the stage
+  var view = store('laadsim.view')==='real' ? 'real' : 'fit';
+  var pxmm = parseFloat(store('laadsim.pxmm')) || 96/25.4;
+  var calibrated = !!store('laadsim.pxmm');
+  var calibrating = false;
+  function layout(){
+    var body = $('stageBody'), wrap = $('devWrap'), dev = $('device');
+    var s;
+    if(view==='real') s = pxmm*SCREEN_MM/320;
+    else {
+      var narrow = window.matchMedia('(max-width:560px)').matches;
+      var w = body.clientWidth - 8, h = narrow ? 9999 : body.clientHeight - 8;
+      s = Math.max(0.4, Math.min(w/422, h/312, 2.6));
+    }
+    dev.style.transform = 'scale('+s+')';
+    wrap.style.width = Math.round(422*s)+'px'; wrap.style.height = Math.round(312*s)+'px';
+    $('devWrap').hidden = calibrating;
+    var card = $('cardRef');
+    card.hidden = !calibrating;
+    card.style.width = Math.round(85.6*pxmm)+'px'; card.style.height = Math.round(53.98*pxmm)+'px';
+    $('stageLbl').textContent = view==='real'
+      ? (calibrated ? 'Ware grootte · beeld 57 x 43 mm' : 'Ware grootte · nog niet gekalibreerd')
+      : '2,8 inch · 320 x 240 pixels, vergroot';
+    $('calBox').hidden = view!=='real';
+    $('calSlide').hidden = !calibrating;
+    $('btnCal').textContent = calibrating ? 'Klaar met kalibreren' : (calibrated ? 'Opnieuw kalibreren' : 'Kalibreren met bankkaart');
+    $('cal').value = pxmm.toFixed(2);
+    $('calOut').textContent = fmt(85.6*pxmm,0)+' px breed';
+    Array.prototype.forEach.call($('viewSeg').children, function(b){ b.setAttribute('aria-pressed', b.dataset.view===view?'true':'false'); });
+  }
+
+  // ----- wiring
+  $('modeTile').addEventListener('click', function(){ S.screen='menu'; render(); });
+  $('menuClose').addEventListener('click', function(){ S.screen='main'; render(); });
+  $('menuSet').addEventListener('click', function(){ S.setTmp={dev:S.dev, pw:{wagen:S.pw.wagen, zwembad:S.pw.zwembad}}; S.screen='set'; render(); });
+  $('setWagen').addEventListener('click', function(){ S.setTmp.dev='wagen'; render(); });
+  $('setZwembad').addEventListener('click', function(){ S.setTmp.dev='zwembad'; render(); });
+  $('pwMinus').addEventListener('click', function(){ var k=S.setTmp.dev; S.setTmp.pw[k]=Math.max(PW_MIN,Math.round((S.setTmp.pw[k]-0.1)*10)/10); render(); });
+  $('pwPlus').addEventListener('click', function(){ var k=S.setTmp.dev; S.setTmp.pw[k]=Math.min(PW_MAX,Math.round((S.setTmp.pw[k]+0.1)*10)/10); render(); });
+  $('setCancel').addEventListener('click', function(){ S.setTmp=null; S.screen='main'; render(); });
+  $('setOk').addEventListener('click', function(){
+    var changed = S.setTmp.dev !== S.dev;
+    S.dev=S.setTmp.dev; S.pw=S.setTmp.pw; S.setTmp=null; S.screen='main';
+    if(changed){ S.carFull=false; S.full=false; S.belowSince=null; if(S.plugOn) S.plugSince=S.t; }
+    if(S.plugOn && S.draw>0) S.draw=P();
+    control(); render();
+  });
+  $('peakTile').addEventListener('click', function(){ S.limTmp=S.limit; S.screen='limit'; render(); });
+  $('limMinus').addEventListener('click', function(){ S.limTmp=Math.max(2.5,Math.round((S.limTmp-0.1)*10)/10); render(); });
+  $('limPlus').addEventListener('click', function(){ S.limTmp=Math.min(10,Math.round((S.limTmp+0.1)*10)/10); render(); });
+  $('limCancel').addEventListener('click', function(){ S.screen='main'; render(); });
+  $('limOk').addEventListener('click', function(){ S.limit=S.limTmp; S.screen='main'; control(); render(); });
+
+  $('btnRun').addEventListener('click', function(){ if(S.done){ S.done=false; } S.running=!S.running; last=performance.now(); render(); });
+  $('btnReset').addEventListener('click', function(){ $('base').value='-1.8'; fresh(); render(); });
+  $('speedSeg').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b) return; S.speed=+b.dataset.speed; render(); });
+  $('btnDemo').addEventListener('click', function(){
+    fresh(); S.t=6*3600; S.q=Math.floor(S.t/900); S.demo=true; S.running=true; S.speed=60; S.mode='zon';
+    S.base=demoBase(S.t); S.ema=-S.base; S.emaNet=S.base; last=performance.now(); render();
+  });
+  $('base').addEventListener('input', function(){ S.demo=false; S.done=false; S.base=parseFloat(this.value); if(!S.running){ S.ema=-S.base; S.emaNet=S.base+S.draw; control(); } render(); });
+  $('btnFull').addEventListener('click', function(){ S.carFull=!S.carFull; if(!S.carFull){ S.full=false; S.belowSince=null; if(S.plugOn) S.plugSince=S.t; } render(); });
+  $('mstart').addEventListener('input', function(){ S.monthPeak=parseFloat(this.value); S.monthWhen=null; render(); });
+  $('viewSeg').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b) return; view=b.dataset.view; calibrating=false; store('laadsim.view',view); layout(); });
+  $('btnCal').addEventListener('click', function(){ calibrating=!calibrating; if(!calibrating){ calibrated=true; store('laadsim.pxmm', String(pxmm)); } layout(); });
+  $('cal').addEventListener('input', function(){ pxmm=parseFloat(this.value); layout(); });
+  $('portraitOk').addEventListener('click', function(){ document.body.classList.add('portrait-ok'); });
+
+  if(window.ResizeObserver) new ResizeObserver(layout).observe($('stageBody'));
+  window.addEventListener('resize', layout);
+
+  // ----- loop
+  var last = performance.now();
+  function frame(now){
+    var dt = Math.min(0.25,(now-last)/1000); last = now;
+    if(S.running){
+      S.acc += dt*S.speed;
+      var n=0;
+      while(S.acc >= 1 && n < 4000 && S.running){ step(); S.acc -= 1; n++; }
+    }
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  fresh(); control(); layout(); render();
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
