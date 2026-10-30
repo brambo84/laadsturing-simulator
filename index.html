@@ -163,6 +163,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
 .kv b{font-weight:600;font-variant-numeric:tabular-nums}
 .hint{margin:0;font-size:13px;color:var(--muted)}
 .why p{margin:0}
+.row{display:flex;gap:8px}
+.inp{min-height:44px;min-width:0;flex:1;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;font-variant-numeric:tabular-nums;background:var(--surface);color:var(--ink)}
+.live-ok{color:var(--accent);font-weight:600}
+.live-err{color:var(--warn);font-weight:600}
 .rules{margin:0;padding-left:18px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
 
 /* ---------- portrait phones ---------- */
@@ -323,6 +327,22 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
 
   <section class="panel" aria-label="Simulatie">
     <div class="blk">
+      <div class="blk-h"><h2>Metingen</h2><span class="badge" id="liveBadge" hidden>Live</span></div>
+      <div class="seg" role="group" aria-label="Bron van de metingen" id="srcSeg">
+        <button type="button" data-src="demo">Gesimuleerd</button><button type="button" data-src="live">Live P1-meter</button>
+      </div>
+      <div id="liveBox" hidden>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <label class="sl" for="p1ip"><span>IP-adres van de P1-meter</span></label>
+          <div class="row"><input class="inp" id="p1ip" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="bv. 192.168.1.20"><button type="button" class="btn primary" id="btnLive">Verbinden</button></div>
+          <p class="hint" id="liveStatus">Nog niet verbonden.</p>
+          <a class="btn wide" id="dlLink" href="index.html" download="laadsturing-simulator.html" hidden style="display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--ink)">Pagina downloaden om live te testen</a>
+          <p class="hint">Live leest de P1-meter rechtstreeks via de lokale API, elke 2 seconden. Dat werkt alleen op hetzelfde wifi-netwerk en als je deze pagina als bestand opent (Opslaan als, dan dubbelklikken): vanaf GitHub blokkeert de browser verbindingen naar je thuisnetwerk. De stekker wordt niet echt geschakeld; wat de laadsturing zou doen, wordt gesimuleerd.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="blk">
       <div class="blk-h"><h2>Tijd</h2><span class="badge" id="demoBadge" hidden>Demodag loopt</span></div>
       <div class="clockrow">
         <div class="clock" id="clock">12:00:00</div>
@@ -332,7 +352,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
           <span id="qAvg">gemiddelde afname tot nu 0,00 kW</span>
         </div>
       </div>
-      <div class="ctrls">
+      <div class="ctrls" id="timeCtrls">
         <button type="button" class="btn primary" id="btnRun">Start</button>
         <button type="button" class="btn" id="btnReset">Reset</button>
         <div class="seg" role="group" aria-label="Versnelling" id="speedSeg">
@@ -340,7 +360,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
         </div>
       </div>
       <button type="button" class="btn wide" id="btnDemo">Demodag starten</button>
-      <p class="hint">Een zonnige dag van 06:00 tot 22:00, met wolken, een wasmachine en koken. Loopt op 60x; zet 300x voor de hele dag in drie minuten.</p>
+      <p class="hint" id="demoHint">Een zonnige dag van 06:00 tot 22:00, met wolken, een wasmachine en koken. Loopt op 60x; zet 300x voor de hele dag in drie minuten.</p>
     </div>
 
     <div class="blk why">
@@ -348,7 +368,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
       <p id="why">De lader staat uit.</p>
     </div>
 
-    <div class="blk">
+    <div class="blk" id="baseBlk">
       <h2>Huis en zonnepanelen</h2>
       <label class="sl" for="base"><span>Net zonder stekker</span><output id="baseOut" for="base"></output></label>
       <input type="range" id="base" min="-6" max="6" step="0.1" value="-1.8">
@@ -374,7 +394,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
       <p class="hint">Bootst na wat er gebeurt als je het toestel thuis instelt en daarna bij je schoonbroer inplugt: het vindt zijn wifi niet en vraagt om wifi en apparaten te kiezen. Instellingen zoals limiet en vermogen blijven bewaard.</p>
     </div>
 
-    <div class="blk">
+    <div class="blk" id="monthBlk">
       <h2>Maandpiek</h2>
       <label class="sl" for="mstart"><span>Maandpiek bij de start</span><output id="mOut" for="mstart"></output></label>
       <input type="range" id="mstart" min="2.5" max="8" step="0.1" value="3.4">
@@ -620,6 +640,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
         return 'Modus Zon: '+who+' '+d.run+' op overschot. '+(Math.abs(S.base+S.draw)<0.05 ? 'Het net staat nu op nul.' : S.base+S.draw<0? 'Er gaat nog '+fmt(-(S.base+S.draw),2)+' kW extra naar het net.' : 'Er komt '+fmt(S.base+S.draw,2)+' kW van het net, binnen de marge.');
       }
       if(S.wait > 0) return 'Modus Zon: '+fmt(surplus,2)+' kW overschot is genoeg, maar de stekker wacht nog '+ms(S.wait)+'. Hij moet eerst '+minTxt+' uit geweest zijn.';
+      if(surplus >= p+0.1) return 'Modus Zon: '+fmt(surplus,2)+' kW overschot. De laadsturing kijkt nog even of het overschot blijft voor ze '+who+' aanzet.';
       return 'Modus Zon: '+(surplus>0? 'maar '+fmt(surplus,2)+' kW overschot' : 'geen overschot')+'. '+Who+' start pas vanaf '+fmt(p+0.1,1)+' kW.';
     }
     var rem = 900-(S.t%900), withCh = (S.E + Math.max(S.base+p,0)*rem)/900;
@@ -632,7 +653,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
   }
 
   function render(){
-    var net = S.base + S.draw;
+    var net = S.base + (LIVE.on ? 0 : S.draw);
     // views
     $('vMain').hidden = S.screen!=='main';
     $('vMenu').hidden = S.screen!=='menu';
@@ -678,7 +699,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
     // month
     $('monthVal').textContent = fmt(S.monthPeak,2);
     if(pred > S.monthPeak){ $('monthSub').textContent = 'wordt '+fmt(pred,2)+' kW'; $('monthSub').style.color = '#FBBF24'; }
-    else { $('monthSub').textContent = S.monthWhen===null ? 'stand bij de start' : 'vandaag '+hm(S.monthWhen); $('monthSub').style.color = ''; }
+    else { $('monthSub').textContent = LIVE.on ? (LIVE.monthTxt || 'volgens de meter') : S.monthWhen===null ? 'stand bij de start' : 'vandaag '+hm(S.monthWhen); $('monthSub').style.color = ''; }
     // menu
     Array.prototype.forEach.call(mgrid.children, function(b){
       var k=b.dataset.mode, on=k===S.mode, c=MODES[k].c;
@@ -694,7 +715,12 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
     var q0 = Math.floor(S.t/900)*900, into = S.t%900;
     $('qLbl').textContent = 'Kwartier '+hm(q0)+' tot '+hm(q0+900);
     $('qBar').style.width = (into/900*100).toFixed(1)+'%';
-    $('qAvg').textContent = 'gemiddelde afname tot nu '+fmt(into? S.E/into : Math.max(net,0),2)+' kW';
+    $('qAvg').textContent = (LIVE.on && LIVE.avg!==null ? 'kwartiergemiddelde volgens de meter ' : 'gemiddelde afname tot nu ')+fmt(into? S.E/into : Math.max(net,0),2)+' kW';
+    $('timeCtrls').hidden = LIVE.on; $('btnDemo').hidden = LIVE.on; $('demoHint').hidden = LIVE.on;
+    $('baseBlk').hidden = LIVE.on; $('monthBlk').hidden = LIVE.on;
+    $('liveBox').hidden = !LIVE.on; $('liveBadge').hidden = !(LIVE.on && LIVE.ok);
+    Array.prototype.forEach.call($('srcSeg').children, function(b){ b.setAttribute('aria-pressed', (b.dataset.src==='live')===LIVE.on ? 'true':'false'); });
+    $('liveStatus').textContent = LIVE.status; $('liveStatus').className = 'hint ' + (LIVE.ok ? 'live-ok' : LIVE.err ? 'live-err' : '');
     $('btnRun').textContent = S.running ? 'Pauze' : (S.t===12*3600 && !S.done ? 'Start' : 'Verder');
     $('demoBadge').hidden = !S.demo;
     $('demoBadge').textContent = 'Demodag loopt';
@@ -709,7 +735,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
     $('pwOut').textContent = fmt(P(),1)+' kW';
     $('btnFull').classList.toggle('on', S.carFull);
     $('mOut').textContent = fmt(parseFloat($('mstart').value),1)+' kW';
-    $('why').textContent = configured() ? whyText() : 'Het toestel is nog niet ingesteld op deze plek. Zolang wifi, P1-meter en stekker niet gekozen zijn, blijft de stekker uit.';
+    $('why').textContent = configured() ? (LIVE.on ? (LIVE.ok ? 'Live: ' + whyText() + ' De echte stekker wordt niet geschakeld.' : 'Live: wacht op metingen van de P1-meter.') : whyText()) : 'Het toestel is nog niet ingesteld op deze plek. Zolang wifi, P1-meter en stekker niet gekozen zijn, blijft de stekker uit.';
     $('locBadge').textContent = place().name;
     $('instWifi').textContent = INST.ssid || 'niet verbonden';
     $('instP1').textContent = devById(INST.p1) ? devById(INST.p1).name+' ('+devById(INST.p1).ip+')' : 'niet gekozen';
@@ -928,11 +954,83 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
   if(window.ResizeObserver) new ResizeObserver(layout).observe($('stageBody'));
   window.addEventListener('resize', layout);
 
+  // ----- live P1-meter (HomeWizard local API v1)
+  var LIVE = {on:false, ip:store('laadsim.p1ip')||'', ok:false, err:false, status:'Nog niet verbonden.', avg:null, month:null, monthTxt:'', timer:null, gen:0};
+  $('p1ip').value = LIVE.ip;
+  if(location.protocol==='https:' && location.hostname.slice(-9)==='github.io') $('dlLink').hidden = false;
+  function nowSec(){ var d=new Date(); return d.getHours()*3600+d.getMinutes()*60+d.getSeconds(); }
+  function poll(gen){
+    if(!LIVE.on || gen!==LIVE.gen) return;
+    var ctl = window.AbortController ? new AbortController() : null;
+    var to = setTimeout(function(){ if(ctl) ctl.abort(); }, 3500);
+    fetch('http://'+LIVE.ip+'/api/v1/data', ctl ? {signal:ctl.signal, cache:'no-store'} : {cache:'no-store'})
+      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(d){
+        clearTimeout(to); if(gen!==LIVE.gen) return;
+        if(typeof d.active_power_w !== 'number') throw new Error('geen P1-gegevens');
+        S.base = d.active_power_w/1000;
+        if(!LIVE.ok){ S.ema = -S.base; S.emaNet = S.base; }
+        LIVE.avg = typeof d.active_power_average_w==='number' ? d.active_power_average_w/1000 : null;
+        LIVE.month = typeof d.montly_power_peak_w==='number' ? d.montly_power_peak_w/1000 : null;
+        var ts = String(d.montly_power_peak_timestamp||'');
+        LIVE.monthTxt = ts.length>=10 ? ts.slice(4,6)+'/'+ts.slice(2,4)+' '+ts.slice(6,8)+':'+ts.slice(8,10) : '';
+        LIVE.ok = true; LIVE.err = false;
+        LIVE.status = 'Verbonden met '+LIVE.ip+'. Laatste meting om '+hms(nowSec())+': '+(S.base<0? fmt(-S.base,2)+' kW injectie' : fmt(S.base,2)+' kW afname')+'.';
+      })
+      .catch(function(e){
+        clearTimeout(to); if(gen!==LIVE.gen) return;
+        LIVE.ok = false; LIVE.err = true;
+        if(location.protocol==='https:') LIVE.status = 'Geen verbinding: vanaf een https-pagina (zoals GitHub) blokkeert de browser verbindingen naar je thuisnetwerk. Open deze pagina als bestand.';
+        else if(e && e.name==='AbortError') LIVE.status = 'Geen antwoord van '+LIVE.ip+'. Klopt het IP-adres en staat de lokale API aan in de HomeWizard-app?';
+        else LIVE.status = 'Geen verbinding met '+LIVE.ip+' ('+(e && e.message ? e.message : 'geblokkeerd')+'). Klopt het IP-adres, staat de lokale API aan, en zit je op hetzelfde wifi-netwerk?';
+      })
+      .then(function(){ if(LIVE.on && gen===LIVE.gen) LIVE.timer = setTimeout(function(){ poll(gen); }, 2000); });
+  }
+  function liveStart(){
+    var ip = $('p1ip').value.trim().replace(/^https?:[/][/]/,'').split('/')[0];
+    if(!ip){ LIVE.status='Vul eerst het IP-adres van de P1-meter in.'; LIVE.err=true; render(); return; }
+    LIVE.ip = ip; store('laadsim.p1ip', ip);
+    LIVE.gen++; clearTimeout(LIVE.timer); LIVE.ok=false; LIVE.err=false; LIVE.status='Verbinden met '+ip+'...';
+    poll(LIVE.gen); render();
+  }
+  function setSource(live){
+    if(live===LIVE.on) return;
+    LIVE.on = live; LIVE.gen++; clearTimeout(LIVE.timer); LIVE.ok=false; LIVE.err=false; LIVE.avg=null; LIVE.month=null;
+    fresh(); S.running=false; S.demo=false;
+    if(live){ S.t = nowSec(); S.q = Math.floor(S.t/900); S.base = 0; S.ema = 0; S.emaNet = 0; LIVE.status = LIVE.ip ? 'Verbinden...' : 'Vul het IP-adres in en tik op Verbinden.'; if(LIVE.ip) liveStart(); }
+    control(); render();
+  }
+  function liveStep(){
+    var t = nowSec(); if(t===S.t) return;
+    if(t < S.t){ S.plugSince=-1e9; S.offSince=-1e9; S.lastSwitch=-1e9; }   // past midnight
+    var q = Math.floor(t/900);
+    if(q!==S.q){ S.q=q; S.E=0; }
+    S.t = t;
+    if(!LIVE.ok) return;
+    if(LIVE.avg!==null) S.E = LIVE.avg*(t%900); else S.E += Math.max(S.base,0);
+    if(LIVE.month!==null) S.monthPeak = LIVE.month;
+    if(S.plugOn && !S.carFull && S.t - S.plugSince >= D().delay){ S.draw = P(); S.measured[S.dev] = P(); }
+    else if(S.plugOn && S.carFull) S.draw = 0.02;
+    else S.draw = 0;
+    var net = S.base + S.draw;
+    S.ema += (-S.base - S.ema)/30;
+    S.emaNet += (net - S.emaNet)/30;
+    if(S.plugOn && S.t - S.plugSince > FULL_AFTER && S.draw < 0.05){
+      if(S.belowSince===null) S.belowSince = S.t;
+      if(S.t - S.belowSince >= FULL_AFTER) S.full = true;
+    } else if(S.draw >= 0.05){ S.belowSince = null; S.full = false; }
+    control();
+  }
+  $('srcSeg').addEventListener('click', function(e){ var b=e.target.closest('button'); if(b) setSource(b.dataset.src==='live'); });
+  $('btnLive').addEventListener('click', liveStart);
+  $('p1ip').addEventListener('keydown', function(e){ if(e.key==='Enter') liveStart(); });
+
   // ----- loop
   var last = performance.now();
   function frame(now){
     var dt = Math.min(0.25,(now-last)/1000); last = now;
-    if(S.running){
+    if(LIVE.on) liveStep();
+    else if(S.running){
       S.acc += dt*S.speed;
       var n=0;
       while(S.acc >= 1 && n < 4000 && S.running){ step(); S.acc -= 1; n++; }
